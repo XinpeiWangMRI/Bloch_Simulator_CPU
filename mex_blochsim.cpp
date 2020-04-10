@@ -95,6 +95,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
 	//default voxel widths of 1 mm
 	double localWidthX = .1, localWidthY = .1, localWidthZ = .1;
 	size_t ndims_VoxelWidths;
+	double* allWidths;
 
 	for (int ifield = 0; ifield < nfields; ifield++) {
 		fname = (char*)mxGetFieldNameByNumber(prhs[0], ifield);
@@ -155,7 +156,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
 					mexErrMsgIdAndTxt("MATLAB:gateway:voxelDimensions",
 						"Set of voxel widths must be either scalar, 3x1 (or 1x3) vector, or same size as spatial grids");
 				}
-				double* allWidths = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
+				allWidths = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
 				localWidthX = allWidths[0];
 				localWidthY = allWidths[1];
 				localWidthZ = allWidths[2];
@@ -163,6 +164,8 @@ void mexFunction(int nlhs, mxArray* plhs[],
 			}
 			//Still need to write this interface.
 			case 3: {
+				//User will need to append, in Matlab, cat(cat(3,xgrid,ygrid),zgrid) so that the result is still 3D
+				allWidths = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
 				break;
 			}
 			default:
@@ -198,32 +201,32 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
 	size_t* dimsOut = new size_t[ndims + 1];
 	switch (ndims) {
-	case 1:
-		numCols = mymax(dims[0], 1);
-		dimsOut[0] = numCols;
-		dimsOut[1] = nTime;
-		break;
-	case 2:
-		numCols = mymax(dims[0], 1);
-		numRows = mymax(dims[1], 1);
-		dimsOut[0] = numCols;
-		dimsOut[1] = numRows;
-		dimsOut[2] = nTime;
+		case 1:
+			numCols = mymax(dims[0], 1);
+			dimsOut[0] = numCols;
+			dimsOut[1] = nTime;
+			break;
+		case 2:
+			numCols = mymax(dims[0], 1);
+			numRows = mymax(dims[1], 1);
+			dimsOut[0] = numCols;
+			dimsOut[1] = numRows;
+			dimsOut[2] = nTime;
 
-		break;
-	case 3:
-		numCols = mymax(dims[0], 1);
-		numRows = mymax(dims[1], 1);
-		numPages = mymax(dims[2], 1);
-		dimsOut[0] = numCols;
-		dimsOut[1] = numRows;
-		dimsOut[2] = numPages;
-		dimsOut[3] = nTime;
+			break;
+		case 3:
+			numCols = mymax(dims[0], 1);
+			numRows = mymax(dims[1], 1);
+			numPages = mymax(dims[2], 1);
+			dimsOut[0] = numCols;
+			dimsOut[1] = numRows;
+			dimsOut[2] = numPages;
+			dimsOut[3] = nTime;
 
-		break;
-	default:
-		mexErrMsgIdAndTxt("MATLAB:mex_blochsim:ndims",
-			"Number of dimensions of xgrid must be 1, 2, or 3.");
+			break;
+		default:
+			mexErrMsgIdAndTxt("MATLAB:mex_blochsim:ndims",
+				"Number of dimensions of xgrid must be 1, 2, or 3.");
 	};
 
 
@@ -236,17 +239,20 @@ void mexFunction(int nlhs, mxArray* plhs[],
 		magn[index].setpos(index, xgrid, ygrid, zgrid);
 		magn[index].setobj(usrObj[index]);
 		//not ready yet.
-		/*
-		switch ndims_VoxelWidths{
-		* case 3:
-		*	magn[index].setVoxelWidth(voxelWidthsX[index],voxelWidthsY[index],voxelWidthsZ[index]);
-		*	break;
-		*
-		* default:
-		*	magn[index].setVoxelWidth(localWidthX,localWidthY,localWidthZ);
-		*	break;
-		*}
-		*/
+		
+		switch (ndims_VoxelWidths){
+			case 3:
+			//User will need to append, in Matlab, cat(cat(3,xgrid,ygrid),zgrid) so that the result is still 3D
+			//Then adding the multiplication in the index steps through to ygrid then 2x goes to zgrid.
+				magn[index].setVoxelWidths(allWidths[index],allWidths[index + numCols * numRows * numPages],
+									allWidths[index + 2 * numCols * numRows * numPages]);
+				break;
+		
+			default:
+				magn[index].setVoxelWidths(localWidthX,localWidthY,localWidthZ);
+				break;
+		}
+		
 	}
 
 	plhs[0] = mxCreateNumericArray(ndims + 1, dimsOut, mxDOUBLE_CLASS, mxREAL);
