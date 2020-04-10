@@ -4,3 +4,5 @@
 #Compiled files from Matlab
 *.mexw64
 
+#Other file types
+*.asv
