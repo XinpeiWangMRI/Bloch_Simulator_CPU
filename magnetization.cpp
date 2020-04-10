@@ -2,25 +2,11 @@
 #include "math.h"
 #include "mex.h"
 
-/* Copied from internet, solves issue with not finding atomicAdd */
-CUDA_CALLABLE_MEMBER double myatomicAdd(double* address, double val)
-{
-    unsigned long long int* address_as_ull = (unsigned long long int*)address;
-    unsigned long long int old = *address_as_ull, assumed;
-    do {
-        assumed = old;
-        old = atomicCAS(address_as_ull, assumed,
-                __double_as_longlong(val + __longlong_as_double(assumed)));
-    } while (assumed != old);
-    return __longlong_as_double(old);
-}
+//Default Constructor, a lone spin at the origin that is thermally relaxed.
+magnetization::magnetization() : mx(0.0),my(0.0),mz(1.0),xpos(0.0),ypos(0.0),zpos(0.0),bin(0),
+                    offres(0.0), volume(1){}
 
-__host__ CUDA_CALLABLE_MEMBER magnetization::magnetization(double mx0, double my0, double mz0, double x,
-            double y, double z, int index, double offres, int volume, int avg) 
-            : mx(mx0),my(my0),mz(mz0),xpos(x),ypos(y),zpos(z),bin(index),
-                    offres(offres), volume(volume), avg(avg) {}
-
-CUDA_CALLABLE_MEMBER void magnetization::rotate(double bx,double by, double bz, double tstep) {
+void magnetization::rotate(const double bx, const double by, const double bz, const double tstep) {
     double xprod[3], tempm[3];
     double dot, phi, weff;
     double M_PI = 4.0 * atan(1.0);
@@ -46,143 +32,82 @@ CUDA_CALLABLE_MEMBER void magnetization::rotate(double bx,double by, double bz, 
     }
 }
 
-CUDA_CALLABLE_MEMBER void magnetization::display() {
-    
-}
 
-CUDA_CALLABLE_MEMBER int magnetization::getBin() {
-    return bin;
-}
-
-__host__ CUDA_CALLABLE_MEMBER void magnetization::setBin(int index,int numCols, int numRows,
-        int numPages) {
+//Calculates the output bin based on index into nD arrary (n = 1, 2, 3)
+void magnetization::setBin(const size_t index, const size_t numCols, const size_t numRows,
+    const size_t numPages) {
    
-    int z = (index + 1) % (avg * avg * numRows * numCols);
-    int jj, ii, kk;
+    size_t z = (index + 1) % (numRows * numCols);
+    size_t jj, ii, kk;
     
     if (z != 0) {
-        jj = z % (avg * numCols);
+        jj = z % (numCols);
         if (jj == 0) {
-            jj = avg * numCols;
+            jj = numCols;
         }
-        ii = ((z - jj)/(avg * numCols)) + 1;
+        ii = ((z - jj)/(numCols)) + 1;
     }
     else{
-        jj = avg * numCols;
-        ii = avg * numRows;
+        jj = numCols;
+        ii = numRows;
     }
     ii = ii - 1;
     jj = jj - 1;
-    kk = (index - avg*numCols*(ii)-jj)/(avg * avg * numRows * numCols);
-
-    int flag_jj = 1;
-    int count_jj = 0;
-    int avg_from_jj = 0;
-    
-    int flag_ii = 1;
-    int count_ii = 0;
-    int avg_from_ii = 0;
-    
-    int flag_kk = 1;
-    int count_kk = 0;
-    int avg_from_kk = 0;
-    
-    while (flag_jj == 1) {
-        if (jj < avg) {
-            flag_jj = 0;
-        }
-        else{
-            count_jj = count_jj + 1;
-            if (count_jj >= 1){
-                avg_from_jj = avg_from_jj + 1;
-                count_jj = 0;
-            }
-            jj = jj - avg;
-        }
-    }
-    
+    kk = (index - numCols*(ii)-jj)/(numRows * numCols);
    
-    if (numRows > 1){
-        while (flag_ii == 1) {
-            if (ii < avg) {
-                flag_ii = 0;
-            }
-            else{
-                count_ii = count_ii + 1;
-                if (count_ii >= 1){
-                    avg_from_ii = avg_from_ii + 1;
-                    count_ii = 0;
-                }
-                ii = ii - avg;
-            }
-        }
-    }
-    
-    if (numPages > 1) {
-        while (flag_kk == 1) {
-            if (kk < avg) {
-                flag_kk = 0;
-            }
-            else{
-                count_kk = count_kk + 1;
-                if (count_kk >= 1){
-                    avg_from_kk = avg_from_kk + 1;
-                    count_kk = 0;
-                }
-                kk = kk - avg;
-            }
-        }
-    }
-    
-    bin = avg_from_jj + (numCols)*avg_from_ii + ((numRows)*(numCols))*avg_from_kk;
+    bin = jj + (numCols)*ii + ((numRows)*(numCols))*kk;
 };
 
-CUDA_CALLABLE_MEMBER void magnetization::acquire(double* mxout, double* myout, double* mzout, 
-        int ndims, int time) {
-    int outputBin = bin + time*volume;
-    myatomicAdd(&mxout[outputBin],mx/powf(avg,ndims));
-    myatomicAdd(&myout[outputBin],my/powf(avg,ndims));
-    myatomicAdd(&mzout[outputBin],mz/powf(avg,ndims));
-
-};
-
-__host__ CUDA_CALLABLE_MEMBER void magnetization::setVolume(int numRows, int numCols, int numPages){
+void magnetization::setVolume(const size_t numRows, const size_t numCols, const size_t numPages){
     volume = numRows * numCols * numPages;
 };
 
-CUDA_CALLABLE_MEMBER double magnetization::getX() {
-    return xpos;
-};
-
-CUDA_CALLABLE_MEMBER double magnetization::getY() {
-    return ypos;
-};
-
-CUDA_CALLABLE_MEMBER double magnetization::getZ() {
-    return zpos;
-};
-
-__host__ CUDA_CALLABLE_MEMBER void magnetization::setpos(int index,double* xgrid, double* ygrid, double* zgrid) {
+void magnetization::setpos(const size_t index,double* xgrid, double* ygrid, double* zgrid) {
     xpos = xgrid[index];
     ypos = ygrid[index];
     zpos = zgrid[index];
 };
 
-CUDA_CALLABLE_MEMBER void magnetization::set2eq(){
+void magnetization::set2eq(){
     mx = 0;
     my = 0;
     mz = 1;
 };
 
-CUDA_CALLABLE_MEMBER void magnetization::refocusM(){
+void magnetization::refocusM(){
     mx = -mx;
     mz = -mz;
 };
 
-__host__ void magnetization::setobj(double objmz){
+void magnetization::setobj(const double objmz){
     mz = objmz;
 };
 
-__host__ void magnetization::setOffset(double offset){
+void magnetization::setOffset(const double offset){
     offres = offset;
 };  
+
+//Helper functions
+void acquire(double* mxout, double* myout, double* mzout,
+    const size_t ndims, const size_t time, const double mx, const double my, const double mz,
+    const size_t bin, const size_t volume) {
+    size_t outputBin = bin + time * volume;
+    mxout[outputBin] = mx;
+    myout[outputBin] = my;
+    mzout[outputBin] = mz;
+
+};
+
+//Check if magnetization is valid value. root sum of squares should be <= 1. By extension, sum of squares <= 1.
+bool is_Valid_Magn(const magnetization* magn) {
+    double total_Magn = magn->getMx() * magn->getMx();
+    total_Magn += magn->getMy() * magn->getMy();
+    total_Magn += magn->getMz() * magn->getMz();
+
+    if (total_Magn > 1.0 || total_Magn < 0.0) {
+        mexErrMsgIdAndTxt("MATLAB:magnetization:magnetizationValue",
+            "Magnitude of magnetization must be between 0 and 1 inclusive");
+        return false; //redundant
+    }
+    return true;
+}

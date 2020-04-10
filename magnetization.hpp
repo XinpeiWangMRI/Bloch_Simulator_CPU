@@ -1,63 +1,63 @@
-#pragma once
+#include "mex.h"
 
-#ifdef __CUDACC__
-#define CUDA_CALLABLE_MEMBER __device__
-#else
-#define CUDA_CALLABLE_MEMBER
-#endif 
+#pragma once
 
 class magnetization {
   public:
-    __host__ CUDA_CALLABLE_MEMBER magnetization(double mx0 = 0, double my0 = 0, double mz0 = 1, double x = 0,
-            double y=0, double z=0, int index=0, double offres = 0, int volume = 1,
-            int avg = 1);
-    CUDA_CALLABLE_MEMBER void rotate(double bx, double by, double bz, double tstep);
-    CUDA_CALLABLE_MEMBER void display();
-    CUDA_CALLABLE_MEMBER void acquire(double* mxout, double* myout, double* mzout, int ndims,
-            int time);
-    __host__ CUDA_CALLABLE_MEMBER void setBin(int index,int numCols=1, int numRows=1,
-        int numPages=1);
-    CUDA_CALLABLE_MEMBER int getBin();
-    __host__ CUDA_CALLABLE_MEMBER void setVolume(int numRows, int numCols, int numPages);
-    CUDA_CALLABLE_MEMBER double getX();
-    CUDA_CALLABLE_MEMBER double getY();
-    CUDA_CALLABLE_MEMBER double getZ();
-    __host__ CUDA_CALLABLE_MEMBER void setpos(int index, double* xgrid, double* ygrid, double* zgrid);
-    int avg;
-    CUDA_CALLABLE_MEMBER void set2eq();
-    CUDA_CALLABLE_MEMBER void refocusM();
-    __host__ void setobj(double objmz);
-    __host__ void setOffset(double offset);
+    //Default constructor
+    magnetization();
+
+    //Update mx, my, mz during events
+    void rotate(const double bx, const double by, const double bz, const double tstep);
+
+    //Set output spatial bin. Used to compute output based on time in acquire events.
+    void setBin(const size_t index, const size_t numCols, const size_t numRows, const size_t numPages);
+    //inline simple function which won't change when representation of magn changes.
+    size_t getBin() const { return bin; };
+
+    //Set spatial positions
+    void setpos(const size_t index, double* xgrid, double* ygrid, double* zgrid);
+
+    //Return spatial positions and spin components. Appropriate to inline since they would not likely change when representation of magnetization changes.
+    double getX() const { return xpos; };
+    double getY() const { return ypos; };
+    double getZ() const { return zpos; };
+    double getMx() const { return mx; };
+    double getMy() const { return my; };
+    double getMz() const { return mz; };
+
+    //Set magnetization to equilibrium value
+    void set2eq();
+
+    //Set two magnetization components = -(themselves), this would be the case with a perfect refocusing pulse.
+    void refocusM();
+
+    //Set the equilibrium magnetization to be a different value.
+    void setobj(double objmz);
+
+    //Set/Get off-resonance frequency.
+    void setOffset(const double offset);
+    double getOffset() const { return offres; };
+
+    //Set volume
+    void magnetization::setVolume(const size_t numRows, const size_t numCols, const size_t numPages);
+    size_t magnetization::setVolume() const { return volume; };
+
   private:
+      //current spin components, spatial position, and offresonance frequency, respectively.
     double mx,my,mz,xpos,ypos,zpos,offres;
-    int bin;
-    int volume;
+    //Bin is used for output
+    size_t bin;
+    //Volume is total number of spins, will look back to see if this is even needed now.
+    size_t volume;
 };
-/*
-CUDA_CALLABLE_MEMBER magnetization::magnetization(double mx0, double my0, double mz0, double x,
-            double y, double z, int index, double offres, int volume, int avg) 
-            : mx(mx0),my(my0),mz(mz0),xpos(x),ypos(y),zpos(z),bin(index),
-                    offres(offres), volume(volume), avg(avg) {}
 
-CUDA_CALLABLE_MEMBER void magnetization::rotate(double bx,double by, double bz, double tstep);
+//Helper functions
 
-CUDA_CALLABLE_MEMBER void magnetization::display();
+//Check if magnetization is valid value. root sum of squares should be <= 1. By extension, sum of squares <= 1.
+bool is_Valid_Magn(const double* magnetization);
 
-CUDA_CALLABLE_MEMBER int magnetization::getBin();
-
-CUDA_CALLABLE_MEMBER void magnetization::setBin(int index,int numCols, int numRows,
-        int numPages);
-
-CUDA_CALLABLE_MEMBER void magnetization::acquire(double* mxout, double* myout, double* mzout, 
-        int ndims, int time);
-
-CUDA_CALLABLE_MEMBER void magnetization::setVolume(int numRows, int numCols, int numPages);
-
-CUDA_CALLABLE_MEMBER double magnetization::getX();
-
-CUDA_CALLABLE_MEMBER double magnetization::getY();
-
-CUDA_CALLABLE_MEMBER double magnetization::getZ();
-CUDA_CALLABLE_MEMBER void magnetization::setpos(int index,double* xgrid, double* ygrid, double* zgrid);
-    
-*/
+//Update output arrays by inputting (part of) current magnetization state.
+void acquire(double* mxout, double* myout, double* mzout, const size_t ndims,
+    const size_t time, const double mx, const double my, const double mz,
+    const size_t bin, const size_t volume);
