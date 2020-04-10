@@ -24,7 +24,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
 // compile with:
 //    mex mex_blochsim.cpp mexsimulator.cpp magnetization.cpp event_manager.cpp;
     /******************* CHECK NUMBER OF ARGUMENTS **********************/
-    size_t usrDefNRHS = 2;
+    size_t usrDefNRHS = 1;
     size_t usrDefNLHS = 3;
     
     std::string RHSerrormsg; //strings to store error messages

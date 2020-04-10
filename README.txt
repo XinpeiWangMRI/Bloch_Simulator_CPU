@@ -2,16 +2,15 @@ Bloch simulator as a Matlab C++ MEX plugin, runs on CUDA.
 
 Users,
 
-It would be nice to make this simulator as general as possible, and to have a GUI. I have not yet added B1 map functionality, B0, or relaxation, although all should be straightforward additions.
+The following features do not yet exist:
+1) GUI
+2) B1 map functionality
+3) Relaxation
+4) CPU parallelization
 
-Another nice feature would be to include a switch so that it compiles to be compatible with OpenMP (or other CPU parallelizing library) when not being compiled by the nvidia compiler.
-
-One more feature that would be nice: automatically selecting the least busy GPU card (hereafter referred to as device) to run the simulation on. For now, the user must specify which GPU device to use. The mex file checks how many devices there are and, if the user provided number is available, uses that one. Otherwise it uses device 0.
-
-Error checks. I essentially have none. These could be incorporated to run under-the-hood in a .m script before calling the simulator once there is a GUI in place.
+There is some internal error checking on input types from Matlab, vector lengths,
+and to test if events are valid and magnetization vectors aren't diverging.
 
 Help on any of the above would be greatly appreciated.
-
-As a side note, the first run usually seems to take substantially longer than subsequent runs. Maybe in initializing the GPU? Haven't looked into it much to be honest.
 
 See INSTALL.txt for help with setup and a simple example.
