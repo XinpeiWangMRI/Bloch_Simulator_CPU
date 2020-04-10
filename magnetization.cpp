@@ -2,9 +2,10 @@
 #include "math.h"
 #include "mex.h"
 
-//Default Constructor, a lone spin at the origin that is thermally relaxed.
+//Default Constructor, a lone voxel at the origin that is thermally relaxed with 1mm width in all dimensions. 
+//Update so I am not using magic constants.
 magnetization::magnetization() : mx(0.0),my(0.0),mz(1.0),xpos(0.0),ypos(0.0),zpos(0.0),bin(0),
-                    offres(0.0), volume(1){}
+                    offres(0.0), volume(1), voxelWidthX(.1), voxelWidthY(.1), voxelWidthZ(.1){}
 
 void magnetization::rotate(const double bx, const double by, const double bz, const double tstep) {
     double xprod[3], tempm[3];
@@ -86,6 +87,12 @@ void magnetization::setobj(const double objmz){
 void magnetization::setOffset(const double offset){
     offres = offset;
 };  
+
+void magnetization::setVoxelWidths(const double xWidth, const double yWidth, const double zWidth) {
+    voxelWidthX = xWidth;
+    voxelWidthY = yWidth;
+    voxelWidthZ = zWidth;
+};
 
 //Helper functions
 void acquire(double* mxout, double* myout, double* mzout,

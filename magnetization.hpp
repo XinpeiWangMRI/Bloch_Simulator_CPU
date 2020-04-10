@@ -43,9 +43,14 @@ class magnetization {
     void magnetization::setVolume(const size_t numRows, const size_t numCols, const size_t numPages);
     size_t magnetization::setVolume() const { return volume; };
 
+    //Set voxel widths
+    void magnetization::setVoxelWidths(const double xWidth, const double yWidth, const double zWidth);
+
   private:
       //current spin components, spatial position, and offresonance frequency, respectively.
     double mx,my,mz,xpos,ypos,zpos,offres;
+    double voxelWidthX, voxelWidthY, voxelWidthZ;
+
     //Bin is used for output
     size_t bin;
     //Volume is total number of spins, will look back to see if this is even needed now.
