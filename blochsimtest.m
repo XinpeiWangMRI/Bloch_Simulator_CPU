@@ -3,23 +3,25 @@
 % in initializing the GPU?
 % types of events: 0 - 7 corresponding to (in order)
 % pulse,gradient,pulseAndgrad,delay,acquire,pulseGradAcq,thermaleq,refocus 
-avg = 2;
 n = 128;
-x = linspace(-19.2/2,19.2/2,avg*n);
+x = linspace(-19.2/2,19.2/2,n);
 y = x;
 z = 0;
-obj = phantom(n*avg); %since grid is 2D, object is too. Need 3D object for 3D simulation
+obj = phantom(n); %since grid is 2D, object is too. Need 3D object for 3D simulation
                       %there is a package on the matlab file exchange for
                       %3d shepp logan phantom
 
 [xgrid,ygrid,zgrid] = ndgrid(x,y,z);
 nEvent = 2;
 eventlist = zeros(nEvent,3);
-eventlist(1,:) = [2 1500*4e-6 1500];
-eventlist(2,:) = [4 1*4e-6 1];
-eventlist(3,:) = [2 1500*4e-6 1500];
-eventlist(4,:) = [7 1*4e-6 1]; %refocusing event
-eventlist(5,:) = [4 1*4e-6 1];
+%matlab won't let us assign the enumeration directly in a vector.
+%it only permits single entry assignment directly to enumeration.
+%e.g. eventlist(1,1) = EventTypes.pulseAndgrad is perfectly allowed.
+eventlist(1,:) = [double(EventTypes.pulseAndgrad), 1500*4e-6, 1500];
+eventlist(2,:) = [double(EventTypes.acquisition) 1*4e-6 1];
+eventlist(3,:) = [double(EventTypes.pulseAndgrad) 1500*4e-6 1500];
+eventlist(4,:) = [double(EventTypes.refocus) 1*4e-6 1]; %refocusing event
+eventlist(5,:) = [double(EventTypes.acquisition) 1*4e-6 1];
 
 gradNull = 10000;
 rfNull = -10000;
@@ -30,10 +32,8 @@ Gz = [gradNull;gradNull;gradNull;gradNull;gradNull];
 [amp,phase] = HSpulse(10,1,1000,1); %r = 10, n = 1, 1000 time points, nonzero 4th entry means sweep goes through 0 offset
 rfamp = [62.5*amp';zeros(500,1);rfNull;62.5*amp';zeros(500,1);rfNull;rfNull];
 rfphase = [phase';zeros(500,1);rfNull;phase';zeros(500,1);rfNull;rfNull];
-cudaDevNum = 0; %should be less than 4 on gpu4gar. There is an internal check if used on other systems
 
 seqParams = struct();
-seqParams.avg = avg;
 seqParams.xgrid = xgrid;
 seqParams.ygrid = ygrid;
 seqParams.zgrid = zgrid;
@@ -46,7 +46,7 @@ seqParams.events = eventlist;
 seqParams.usrObj = obj;
 
 tic;
-[mx,my,mz] = mex_blochsim(seqParams,cudaDevNum);
+[mx,my,mz] = mex_blochsim(seqParams);
 totaltime = toc;
 mxy = mx + 1i*my;
 
