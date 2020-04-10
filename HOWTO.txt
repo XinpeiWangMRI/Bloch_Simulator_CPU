@@ -1,0 +1,58 @@
+A simple example is provided in blochsimtest.m which excites a slice in x then in y. Note x is rows here (first index in arrays).
+
+The function call is as follows:
+
+[mx,my,mz] = mex_blochsim(params,cudaDevNum);
+
+Breaking down every field (so far) of params:
+
+avg is the amount of intral-voxel averaging to perform. Note that xgrid, ygrid, zgrid should be designed to have dimensions equal to integral multiples times avg. 
+
+xgrid, ygrid, and zgrid should be generated using ndgrid or meshgrid in Matlab. NEVER set one of the grids to a scalar, it throws off an internal calculation to allocate sufficient memory for the output arrays.
+
+If you are doing a 2D problem, for example, set [xgrid,ygrid,zgrid] = ndgrid(-12:12,-12:12,0);
+DO NOT do something like [xgrid,ygrid] = ndgrid(-12:12,-12:12); zgrid = 0;
+
+Gx, Gy, Gz are gradients (in G/cm), while rfamp/rfphase are the pulse in Hz and radians.
+
+eventlist is the heart of the simulator (and is a N x 3 array, N being the number of "events"). An "event" is any of the following (enumerated 0 - 7 so far, ascending down the list): 
+
+0) RF pulse, 
+1) gradient, 
+2) RF pulse + gradient, 
+3) sequence delay (won't do anything without B0 or relaxation), 
+4) acquisition (needs gradients), 
+5) simulataneous transmit + receive, 
+6) set to thermal equilibrium,
+7) perfect 180,...
+
+Any event in an MR pulse sequence enters into the eventlist array as a row. The first entry in the row is the type of event (number 0 - 7, must be whole number). The second entry in the row is the duration of the event in seconds. The third entry is the number of discrete steps used to simulate that particular event. A nice feature of this setup is that none of the waveforms needs to be the same length when sending in from Matlab. However, there are some important notes below on the caveats to this.
+
+IMPORTANT NOTES ON EVENTS:
+ALL WAVEFORMS WITHIN AN EVENT MUST BE THE SAME LENGTH. While waveforms over all do not need to be the same length, within an event they should be consistent, or the simulator may end up accessing memory beyond the length of the array (and then crash). Any event which doesn't use one of the gradient channels or the rf should insert gradNull or rfNull as a single step in the waveform. I'm going to strip out this necessity soon, it was added as a workaround to a different problem which is non-existent now. 
+
+If, for example, a gradient event is called with 100 steps, the entry into the eventlist would look something like:
+
+eventlist(eventNum,1) = 1; 		%gradient event
+eventlist(eventNum,2) = 500e-6;		%500 us duration
+eventlist(eventNum,3) = 125;		%125 steps, so 4 us time step, calculated in the simulator
+
+%you would then append to the gradient waveform
+
+Gx(end+1:end+125) = amplitude * ones(125,1);
+
+%if not using other gradients, add one step = gradNull
+Gy(end+1) = gradNull;
+Gz(end+1) = gradNull;
+
+%since rf isn't used, set to rfNull
+rfamp(end+1) = rfNull;
+rfphase(end+1) = 0; 			%can realistically set anything here. Simulator checks for null in the 						%amplitude function
+
+The cudaDevNum is which GPU card to use. For gpu4gar, should be 0 - 3. If using on other systsems, there is an internal check to see how many GPU devices there are, and if the user specified value exceeds this, it defaults to using device 0. 
+
+usrobj is a user specified object and must have the same number of entries as xgrid!!!!
+
+
+
+
