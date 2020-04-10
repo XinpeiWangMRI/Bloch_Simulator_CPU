@@ -1,0 +1,24 @@
+THIS WAS TESTED ON MATLAB 2019a. NO GUARANTEES THAT IT WORKS ON OTHER VERSIONS OF MATLAB.
+
+In matlab, type the following to set the path to the nvidia compiler: 
+
+Linux:
+setenv('MW_NVCC_PATH','/opt/local/cuda-8.0/bin/')
+
+Windows (adapt the v10.2 to your version):
+setenv('MW_NVCC_PATH','C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.2\bin')
+
+If you want to avoid doing this everytime you open Matlab, in Matlab's command window, type:
+
+edit ~/Documents/MATLAB/startup.m
+
+Copy and paste the setenv(...) line from above into this file. Save and close the file. Now every time you open Matlab, it will run startup.m first.
+
+To compile the simulator, navigate into the Bloch_Simulator directory and type:
+
+mex mex_blochsim.cpp mexsimulator.cpp magnetization.cpp event_manager.cpp;
+into the Matlab command line and press enter. 
+
+Assuming there are no errors, it is now ready to go.
+
+
