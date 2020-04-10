@@ -1,0 +1,6 @@
+# Folder made by VS2019
+*.vs
+
+#Compiled files from Matlab
+*.mexw64
+
