@@ -187,9 +187,12 @@ void acquire(double* mxout, double* myout, double* mzout,
     const size_t bin, const size_t volume, const double localKcoord[3]) {
     size_t outputBin = bin + time * volume;
 
-    mxout[outputBin] = sinc(localKcoord[0]) * mx;
-    myout[outputBin] = sinc(localKcoord[1]) * my;
-    mzout[outputBin] = sinc(localKcoord[2]) * mz;
+    mxout[outputBin] = sinc(localKcoord[0]) * sinc(localKcoord[1]) * mx;
+    myout[outputBin] = sinc(localKcoord[0]) * sinc(localKcoord[1]) * my;
+
+    //mxout[outputBin] = mx;
+    //myout[outputBin] = my;
+    mzout[outputBin] = mz;
 
 };
 

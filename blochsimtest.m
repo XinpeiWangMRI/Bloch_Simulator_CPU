@@ -31,7 +31,7 @@ Gx = [.5*ones(1000,1); -.5*ones(500,1);
     double(nullTypes.gradNull)];
 Gy = [double(nullTypes.gradNull);
     double(nullTypes.gradNull);
-    .1*ones(1000,1); -56.4298*ones(500,1);
+    .1*ones(1000,1); -.1*ones(500,1);
     double(nullTypes.gradNull);
     double(nullTypes.gradNull)];
 Gz = [double(nullTypes.gradNull);
@@ -91,6 +91,6 @@ totaltime = toc;
 mxy = mx + 1i*my;
 
 figure();
-imagesc((abs(mxy(:,:,2))));
+imagesc((abs(mxy(:,:,1))));
 colorbar;
 
