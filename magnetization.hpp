@@ -9,6 +9,8 @@ class magnetization {
 
     //Update mx, my, mz during events
     void rotate(const double bx, const double by, const double bz, const double tstep);
+    //Overload rotate for events which have applied gradients.
+    void rotate(const double bx, const double by, const double bz, const double tstep, const double appliedGrads[3]);
 
     //Set output spatial bin. Used to compute output based on time in acquire events.
     void setBin(const size_t index, const size_t numCols, const size_t numRows, const size_t numPages);
@@ -40,29 +42,48 @@ class magnetization {
     double getOffset() const { return offres; };
 
     //Set volume
-    void magnetization::setVolume(const size_t numRows, const size_t numCols, const size_t numPages);
-    size_t magnetization::setVolume() const { return volume; };
+    void setVolume(const size_t numRows, const size_t numCols, const size_t numPages);
+    size_t getVolume() const { return volume; };
 
     //Set voxel widths
-    void magnetization::setVoxelWidths(const double xWidth, const double yWidth, const double zWidth);
+    void setVoxelWidths(const double xWidth, const double yWidth, const double zWidth);
+
+    //Reverse the dephasing time the voxel has seen, as if it has seen a refocusing pulse
+    void reverseDephase();
+    // Can be used to specify the local k-space variables.
+    void reverseDephase(double kx, double ky, double kz);
+
+    //Set intrinsic field gradients
+    void setFieldGrad(double fieldX, double fieldY, double fieldZ);
+
+    //Retrieve local k-space coordinate
+    double getKcoord(int index);
 
   private:
       //current spin components, spatial position, and offresonance frequency, respectively.
     double mx,my,mz,xpos,ypos,zpos,offres;
     double voxelWidthX, voxelWidthY, voxelWidthZ;
 
+    // Local k-space coordinate based off local field gradient, applied gradient, and dephasing time.
+    double localKCoord[3];
+    double localFieldGrad[3];
+
     //Bin is used for output
     size_t bin;
     //Volume is total number of spins, will look back to see if this is even needed now.
     size_t volume;
+    
 };
 
 //Helper functions
 
 //Check if magnetization is valid value. root sum of squares should be <= 1. By extension, sum of squares <= 1.
-bool is_Valid_Magn(const double* magnetization);
+bool is_Valid_Magn(const magnetization* magnetization);
 
 //Update output arrays by inputting (part of) current magnetization state.
 void acquire(double* mxout, double* myout, double* mzout, const size_t ndims,
     const size_t time, const double mx, const double my, const double mz,
-    const size_t bin, const size_t volume);
+    const size_t bin, const size_t volume, const double localKcoord[3]);
+
+//Check to see if magnetization saw pulse as refocusing pulse.
+bool is_Ref_Pulse(const double oldMz, const double newMz);

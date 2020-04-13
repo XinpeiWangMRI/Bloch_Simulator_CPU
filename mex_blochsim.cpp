@@ -83,10 +83,12 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
 	//Get user-defined object. Need an error check on the size of it still 
 	double* usrObj;
-    
+	bool usrObjFlag = false;
+
     //User defined off-resonance map
     double* B0; 
-    
+	double* B0gradient;
+
 	//Get voxel widths. Either need a map, a single global value, or a triplet of values (for x, y, z widths).
 	double* voxelWidthX;
 	double* voxelWidthY;
@@ -95,6 +97,10 @@ void mexFunction(int nlhs, mxArray* plhs[],
 	//need to include voxel widths. Account for either a single universal value, a triplet of values
 	//(uniform in space but different in each dimension), or a triplet of values for each point in space.    
 	bool tripleWidth = false, globalWidth = false;
+
+	//If this becomes true (user specified field map), Must include field gradient maps in each direction and 
+	bool B0flag = false;
+	bool gradientFlag = false;
 
     //Going to mandate including these to correctly calculate dephasing. Will test for changes later.
 	double localWidthX = DBL_MAX, localWidthY = DBL_MAX, localWidthZ = DBL_MAX;
@@ -142,14 +148,19 @@ void mexFunction(int nlhs, mxArray* plhs[],
 		}
         else if (strcmp(fname, "B0") == 0) {
 			B0 = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
+			B0flag = true;
+		}
+		else if (strcmp(fname, "B0gradients") == 0) {
+			B0gradient = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
+			gradientFlag = true;
 		}
 		else if (strcmp(fname, "usrObj") == 0) {
 			usrObj = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
+			usrObjFlag = true;
 		}
 		else if (strcmp(fname, "VoxelWidths") == 0) {
 			ndims_VoxelWidths = mxGetNumberOfDimensions(mxGetFieldByNumber(prhs[0], 0, ifield));
 			const size_t* dims_VoxelWidths = mxGetDimensions(mxGetFieldByNumber(prhs[0], 0, ifield));
-			mexPrintf("ndims_VoxelWidths = %d \n", ndims_VoxelWidths);
 
 			switch (ndims_VoxelWidths) {
 				//If only one value is specified, assign it to all dimensions.
@@ -158,7 +169,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
 				localWidthY = localWidthX;
 				localWidthZ = localWidthX;
 				break;
-				//if there are 2 dimensions, one of them needs to be 3
+				//if there are 2 dimensions, one of them needs to be 3, but it seems to import scalars as 1 x 1.
 			case 2: {
 				
 				if (dims_VoxelWidths[0] == 1 && dims_VoxelWidths[1] == 1) {
@@ -191,6 +202,12 @@ void mexFunction(int nlhs, mxArray* plhs[],
 		}
 	}
    
+
+	if (B0flag && !gradientFlag) {
+		mexErrMsgIdAndTxt("MATLAB:gateway:B0map",
+			"Must specify intrinsic field gradients if B0 is specified.");
+	}
+
 	/* This is the number of magnetization vectors being simulated */
 	nelements = 1;
 	for (int index = 0; index < ndims; index++) {
@@ -252,10 +269,20 @@ void mexFunction(int nlhs, mxArray* plhs[],
 		magn[index].setBin(index, numCols, numRows, numPages);
 		magn[index].setVolume(numCols, numRows, numPages);
 		magn[index].setpos(index, xgrid, ygrid, zgrid);
-		magn[index].setobj(usrObj[index]);
-        magn[index].setOffset(B0[index]);
-        
-		//not ready yet.
+
+		if (usrObjFlag) {
+			magn[index].setobj(usrObj[index]);
+		}
+		if (B0flag) {
+			magn[index].setOffset(B0[index]);
+		}
+		if (gradientFlag) {
+			magn[index].setFieldGrad(	B0gradient[index],
+										B0gradient[index + numCols * numRows * numPages],
+										B0gradient[index + 2 * numCols * numRows * numPages]);
+		}
+		
+		magn[index].setVoxelWidths(localWidthX, localWidthY, localWidthZ);
 		
 		switch (ndims_VoxelWidths){
 			case 3:
