@@ -12,6 +12,7 @@ obj = phantom(n); %since grid is 2D, object is too. Need 3D object for 3D simula
                       %3d shepp logan phantom
 
 [xgrid,ygrid,zgrid] = ndgrid(x,y,z);
+
 nEvent = 2;
 eventlist = zeros(nEvent,3);
 %matlab won't let us assign the enumeration directly in a vector.
@@ -33,6 +34,14 @@ Gz = [gradNull;gradNull;gradNull;gradNull;gradNull];
 rfamp = [62.5*amp';zeros(500,1);rfNull;62.5*amp';zeros(500,1);rfNull;rfNull];
 rfphase = [phase';zeros(500,1);rfNull;phase';zeros(500,1);rfNull;rfNull];
 
+sig = 2;
+B0max = 15000;
+B0 = B0max * exp(-(xgrid.^2 + ygrid.^2 + zgrid.^2)/(2*sig^2));
+
+fprintf('Simulating on grid distorted opposite what B0 causes. \n');
+xgrid = xgrid - B0/(4258 * .5);
+voxelWidths = cat(3,cat(3,xgrid,ygrid),zgrid);
+
 seqParams = struct();
 seqParams.xgrid = xgrid;
 seqParams.ygrid = ygrid;
@@ -44,6 +53,9 @@ seqParams.rfamp = rfamp;
 seqParams.rfphase = rfphase;
 seqParams.events = eventlist;
 seqParams.usrObj = obj;
+seqParams.B0 = B0;
+%avoid having to take all the spatial gradients in C++...
+seqParams.VoxelWidths = voxelWidths;
 
 tic;
 [mx,my,mz] = mex_blochsim(seqParams);

@@ -83,7 +83,10 @@ void mexFunction(int nlhs, mxArray* plhs[],
 
 	//Get user-defined object. Need an error check on the size of it still 
 	double* usrObj;
-
+    
+    //User defined off-resonance map
+    double* B0; 
+    
 	//Get voxel widths. Either need a map, a single global value, or a triplet of values (for x, y, z widths).
 	double* voxelWidthX;
 	double* voxelWidthY;
@@ -136,12 +139,16 @@ void mexFunction(int nlhs, mxArray* plhs[],
 			numelemEvents = mxGetNumberOfElements(mxGetFieldByNumber(prhs[0], 0, ifield));
 			nEvents = mxGetM(mxGetFieldByNumber(prhs[0], 0, ifield));
 		}
+        else if (strcmp(fname, "B0") == 0) {
+			B0 = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
+		}
 		else if (strcmp(fname, "usrObj") == 0) {
 			usrObj = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
 		}
 		else if (strcmp(fname, "VoxelWidths") == 0) {
 			ndims_VoxelWidths = mxGetNumberOfDimensions(mxGetFieldByNumber(prhs[0], 0, ifield));
 			const size_t* dims_VoxelWidths = mxGetDimensions(mxGetFieldByNumber(prhs[0], 0, ifield));
+			mexPrintf("ndims_VoxelWidths = %d \n", ndims_VoxelWidths);
 
 			switch (ndims_VoxelWidths) {
 				//If only one value is specified, assign it to all dimensions.
@@ -152,6 +159,13 @@ void mexFunction(int nlhs, mxArray* plhs[],
 				break;
 				//if there are 2 dimensions, one of them needs to be 3
 			case 2: {
+				
+				if (dims_VoxelWidths[0] == 1 && dims_VoxelWidths[1] == 1) {
+					localWidthX = mxGetScalar(mxGetFieldByNumber(prhs[0], 0, ifield));
+					localWidthY = localWidthX;
+					localWidthZ = localWidthX;
+					break;
+				}
 				if (dims_VoxelWidths[0] != 3 || dims_VoxelWidths[1] != 3) {
 					mexErrMsgIdAndTxt("MATLAB:gateway:voxelDimensions",
 						"Set of voxel widths must be either scalar, 3x1 (or 1x3) vector, or same size as spatial grids");
@@ -238,6 +252,8 @@ void mexFunction(int nlhs, mxArray* plhs[],
 		magn[index].setVolume(numCols, numRows, numPages);
 		magn[index].setpos(index, xgrid, ygrid, zgrid);
 		magn[index].setobj(usrObj[index]);
+        magn[index].setOffset(B0[index]);
+        
 		//not ready yet.
 		
 		switch (ndims_VoxelWidths){
