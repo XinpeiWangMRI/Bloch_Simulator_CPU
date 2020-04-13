@@ -24,15 +24,12 @@ eventlist(3,:) = [double(EventTypes.pulseAndgrad) 1500*4e-6 1500];
 eventlist(4,:) = [double(EventTypes.refocus) 1*4e-6 1]; %refocusing event
 eventlist(5,:) = [double(EventTypes.acquisition) 1*4e-6 1];
 
-gradNull = 10000;
-rfNull = -10000;
-
-Gx = [.5*ones(1000,1);-.5*ones(500,1);gradNull;gradNull;gradNull];
-Gy = [gradNull;gradNull;.1*ones(1000,1);-.1*ones(500,1);gradNull;gradNull];
-Gz = [gradNull;gradNull;gradNull;gradNull;gradNull];
+Gx = [.5*ones(1000,1);-.5*ones(500,1);nullTypes.gradNull;nullTypes.gradNull;nullTypes.gradNull];
+Gy = [nullTypes.gradNull;nullTypes.gradNull;.1*ones(1000,1);-.1*ones(500,1);nullTypes.gradNull;nullTypes.gradNull];
+Gz = [nullTypes.gradNull;nullTypes.gradNull;nullTypes.gradNull;nullTypes.gradNull;nullTypes.gradNull];
 [amp,phase] = HSpulse(10,1,1000,1); %r = 10, n = 1, 1000 time points, nonzero 4th entry means sweep goes through 0 offset
-rfamp = [62.5*amp';zeros(500,1);rfNull;62.5*amp';zeros(500,1);rfNull;rfNull];
-rfphase = [phase';zeros(500,1);rfNull;phase';zeros(500,1);rfNull;rfNull];
+rfamp = [62.5*amp';zeros(500,1);nullTypes.rfNull;62.5*amp';zeros(500,1);nullTypes.rfNull;nullTypes.rfNull];
+rfphase = [phase';zeros(500,1);nullTypes.rfNull;phase';zeros(500,1);nullTypes.rfNull;nullTypes.rfNull];
 
 sig = 2;
 B0max = 15000;

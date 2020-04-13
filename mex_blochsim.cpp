@@ -95,8 +95,9 @@ void mexFunction(int nlhs, mxArray* plhs[],
 	//need to include voxel widths. Account for either a single universal value, a triplet of values
 	//(uniform in space but different in each dimension), or a triplet of values for each point in space.    
 	bool tripleWidth = false, globalWidth = false;
-	//default voxel widths of 1 mm
-	double localWidthX = .1, localWidthY = .1, localWidthZ = .1;
+
+    //Going to mandate including these to correctly calculate dephasing. Will test for changes later.
+	double localWidthX = DBL_MAX, localWidthY = DBL_MAX, localWidthZ = DBL_MAX;
 	size_t ndims_VoxelWidths;
 	double* allWidths;
 
@@ -189,7 +190,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
 			}
 		}
 	}
-
+   
 	/* This is the number of magnetization vectors being simulated */
 	nelements = 1;
 	for (int index = 0; index < ndims; index++) {
@@ -260,8 +261,12 @@ void mexFunction(int nlhs, mxArray* plhs[],
 			case 3:
 			//User will need to append, in Matlab, cat(cat(3,xgrid,ygrid),zgrid) so that the result is still 3D
 			//Then adding the multiplication in the index steps through to ygrid then 2x goes to zgrid.
-				magn[index].setVoxelWidths(allWidths[index],allWidths[index + numCols * numRows * numPages],
-									allWidths[index + 2 * numCols * numRows * numPages]);
+				localWidthX = allWidths[index];
+				localWidthY = allWidths[index + numCols * numRows * numPages];
+				localWidthZ = allWidths[index + 2 * numCols * numRows * numPages];
+
+				magn[index].setVoxelWidths(localWidthX,localWidthY,localWidthZ);
+
 				break;
 		
 			default:
@@ -269,6 +274,12 @@ void mexFunction(int nlhs, mxArray* plhs[],
 				break;
 		}
 		
+	}
+
+	//Test for spatially varying voxel widths here.
+	if (localWidthX == DBL_MAX || localWidthY == DBL_MAX || localWidthZ == DBL_MAX) {
+		mexErrMsgIdAndTxt("MATLAB:gateway:voxelDimensions",
+			"Must specify voxel widths for correct calculation of dephasing across voxel.");
 	}
 
 	plhs[0] = mxCreateNumericArray(ndims + 1, dimsOut, mxDOUBLE_CLASS, mxREAL);
