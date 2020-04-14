@@ -24,7 +24,8 @@ void mrEvent::delayEvent(magnetization* magn) {
     }
 };
 
-void mrEvent::pulseEvent(magnetization* magn, const size_t rfstart, const double* rfpulse, const double* rfphase){
+void mrEvent::pulseEvent(magnetization* magn, const size_t rfstart, const double* rfpulse, const double* rfphase,
+    const bool pulseType){
     double rfx, rfy;
     double oldMz = magn->getMz();
     
@@ -37,11 +38,22 @@ void mrEvent::pulseEvent(magnetization* magn, const size_t rfstart, const double
             rfx = 0;
             rfy = 0;
         }
-        
-        magn->rotate(rfx,rfy, magn->getOffset(),tstep); //0 could be replaced by offres
+
+        //Advance localKcoord during second half of excitation pulse only.
+        if (pulseType && (index - rfstart) < nSteps / 2) {
+            magn->rotate(rfx, rfy, magn->getOffset(), tstep, false); 
+        }
+        else if (pulseType && (index - rfstart) >= nSteps / 2){
+            magn->rotate(rfx, rfy, magn->getOffset(), tstep, true); 
+        }
+        //now account for refocusing pulse. 
+        else if (!pulseType){
+            magn->rotate(rfx, rfy, magn->getOffset(), tstep, false);
+        }
     }
 
-    if (is_Ref_Pulse(magn->getMz(),oldMz)) magn->reverseDephase();
+    //Keeping track of refocusing pulses. 
+    if (!pulseType) magn->reverseDephase();
     
 };
 
@@ -90,7 +102,8 @@ void mrEvent::gradEvent(magnetization* magn, const size_t xstart, const size_t y
 
 void mrEvent::pulsegradEvent(magnetization* magn, const size_t xstart, const size_t ystart,
         const size_t zstart, const double* gradx, const double* grady,
-        const double* gradz, const double* rfpulse, const double* rfphase, const size_t rfstart) {
+        const double* gradz, const double* rfpulse, const double* rfphase, const size_t rfstart, 
+        const bool pulseType) {
 
     double bx, by, bz, rfx, rfy;
     double oldMz = magn->getMz();
@@ -113,6 +126,11 @@ void mrEvent::pulsegradEvent(magnetization* magn, const size_t xstart, const siz
         
         if (gradx[xstart] != gradNull) {
             bx = gauss2Hz * gradx[index + xstart] * magn->getX();
+            /*
+            if (magn->getBin() == 0) {
+                mexPrintf("bx = %f \n", gradx[index + xstart]);
+            }
+            */
             appliedGrad[0] = gradx[index + xstart];
         }
         else {
@@ -137,11 +155,23 @@ void mrEvent::pulsegradEvent(magnetization* magn, const size_t xstart, const siz
         else {
             bz = 0;
         }
+        
+        //Advance localKcoord during second half of excitation pulse only.
+        if (pulseType && (index - rfstart) < nSteps / 2) {
+            magn->rotate(rfx, rfy, bx + by + bz + magn->getOffset(), tstep, appliedGrad, false);
 
-        magn->rotate(rfx,rfy,bx+by+bz+ magn->getOffset(),tstep, appliedGrad);
+        }
+        else if (pulseType && (index - rfstart) >= nSteps / 2) {
+            magn->rotate(rfx, rfy, bx + by + bz + magn->getOffset(), tstep, appliedGrad, true);
+        }
+        //now account for refocusing pulse. 
+        else if (!pulseType) {
+            magn->rotate(rfx, rfy, bx + by + bz + magn->getOffset(), tstep, appliedGrad, false);
+        }
     };
 
-    if (is_Ref_Pulse(magn->getMz(), oldMz)) magn->reverseDephase();
+    //Keeping track of refocusing pulses. 
+    if(!pulseType) magn->reverseDephase();
 
 };
 
@@ -149,7 +179,7 @@ void mrEvent::pulseGradAcqEvent(magnetization* magn, const size_t xstart, const 
         const size_t zstart, const double* gradx, const double* grady,
         const double* gradz, double* mxout, double* myout, double* mzout,
         const size_t ndims, const size_t timestart, const double* rfpulse,
-        const double* rfphase, const size_t rfstart) {
+        const double* rfphase, const size_t rfstart, const bool pulseType) {
     
     double bx, by, bz, rfx, rfy;
     double oldMz = magn->getMz();
@@ -199,7 +229,19 @@ void mrEvent::pulseGradAcqEvent(magnetization* magn, const size_t xstart, const 
             bz = 0;
         }
 
-        magn->rotate(rfx,rfy,bx+by+bz + magn->getOffset(),tstep,appliedGrad);
+        //Advance localKcoord during second half of excitation pulse only.
+        if (pulseType && (index - rfstart) < nSteps / 2) {
+            magn->rotate(rfx, rfy, bx + by + bz + magn->getOffset(), tstep, appliedGrad, false);
+
+        }
+        else if (pulseType && (index - rfstart) >= nSteps / 2) {
+            magn->rotate(rfx, rfy, bx + by + bz + magn->getOffset(), tstep, appliedGrad, true);
+        }
+        //now account for refocusing pulse. 
+        else if (!pulseType) {
+            magn->rotate(rfx, rfy, bx + by + bz + magn->getOffset(), tstep, appliedGrad, false);
+        }
+
         kcoord[0] = magn->getKcoord(0);
         kcoord[1] = magn->getKcoord(1);
         kcoord[2] = magn->getKcoord(2);

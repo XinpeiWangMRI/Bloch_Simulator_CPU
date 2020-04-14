@@ -30,18 +30,19 @@ class mrEvent {
         //The actual types of events.
         void delayEvent(magnetization* magn);
         void pulseEvent(magnetization* magn, const size_t rfstart, const double* rfpulse,
-            const double* rfphase);
+            const double* rfphase, const bool pulseType);
         void gradEvent(magnetization* magn, const size_t xstart, const size_t ystart,
             const size_t zstart, const double* gradx, const double* grady,
             const double* gradz);
         void pulsegradEvent(magnetization* magn, const size_t xstart, const size_t ystart,
             const size_t zstart, const double* gradx, const double* grady,
-            const double* gradz, const double* rfpulse, const double* rfphase, const size_t rfstart);
+            const double* gradz, const double* rfpulse, const double* rfphase, const size_t rfstart, 
+            const bool pulseType);
         void pulseGradAcqEvent(magnetization* magn, const size_t xstart, const size_t ystart,
             const size_t zstart, const double* gradx, const double* grady,
             const double* gradz, double* mxout, double* myout, double* mzout,
             const size_t ndims, const size_t timestart, const double* rfpulse,
-            const double* rfphase, const size_t rfstart);
+            const double* rfphase, const size_t rfstart, const bool pulseType);
         void acquireEvent(magnetization* magn, const size_t xstart, const size_t ystart,
             const size_t zstart, const double* gradx, const double* grady,
             const double* gradz, double* mxout, double* myout, double* mzout,

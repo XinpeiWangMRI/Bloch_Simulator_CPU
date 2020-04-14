@@ -8,6 +8,7 @@ inline double sinc(double x) {
 
     return sin(x) / x;
 }
+
 //Default Constructor, a lone voxel at the origin that is thermally relaxed with 1mm width in all dimensions. 
 //Update so I am not using magic constants.
 magnetization::magnetization() : mx(0.0),my(0.0),mz(1.0),xpos(0.0),ypos(0.0),zpos(0.0),bin(0),
@@ -47,6 +48,42 @@ void magnetization::rotate(const double bx, const double by, const double bz, co
 
 }
 
+void magnetization::rotate(const double bx, const double by, const double bz, const double tstep, const bool advanceK)
+{
+    double xprod[3], tempm[3];
+    double dot, phi, weff;
+
+
+    weff = sqrt(bx * bx + by * by + bz * bz);
+    phi = -2 * M_PI * weff * tstep;
+
+    if (weff != 0.0) {
+
+        xprod[0] = (by * mz - bz * my) / weff;
+        xprod[1] = (bz * mx - bx * mz) / weff;
+        xprod[2] = (bx * my - by * mx) / weff;
+
+        dot = (bx * mx + by * my + bz * mz) / weff;
+
+        tempm[0] = cos(phi) * mx + sin(phi) * xprod[0] + (1 - cos(phi)) * dot * bx / weff;
+        tempm[1] = cos(phi) * my + sin(phi) * xprod[1] + (1 - cos(phi)) * dot * by / weff;
+        tempm[2] = cos(phi) * mz + sin(phi) * xprod[2] + (1 - cos(phi)) * dot * bz / weff;
+
+        mx = tempm[0];
+        my = tempm[1];
+        mz = tempm[2];
+    }
+
+    //Need to update dephasing, too! 
+    //local field grad is already in Hz/distance.
+    if (advanceK) {
+        localKCoord[0] += 2.0 * M_PI * tstep * localFieldGrad[0] * voxelWidthX;
+        localKCoord[1] += 2.0 * M_PI * tstep * localFieldGrad[1] * voxelWidthY;
+        localKCoord[2] += 2.0 * M_PI * tstep * localFieldGrad[2] * voxelWidthZ;
+    }
+
+}
+
 //If event has applied gradients.
 void magnetization::rotate(const double bx, const double by, const double bz, const double tstep,
     const double appliedGrads[3])
@@ -80,6 +117,44 @@ void magnetization::rotate(const double bx, const double by, const double bz, co
     localKCoord[0] += 2.0 * M_PI * tstep * (gauss2Hz * appliedGrads[0] + localFieldGrad[0]) * voxelWidthX;
     localKCoord[1] += 2.0 * M_PI * tstep * (gauss2Hz * appliedGrads[1] + localFieldGrad[1]) * voxelWidthY;
     localKCoord[2] += 2.0 * M_PI * tstep * (gauss2Hz * appliedGrads[2] + localFieldGrad[2]) * voxelWidthZ;
+
+}
+
+//If event has an RF pulse
+void magnetization::rotate(const double bx, const double by, const double bz, const double tstep,
+    const double appliedGrads[3], const bool advanceK)
+{
+    double xprod[3], tempm[3];
+    double dot, phi, weff;
+
+
+    weff = sqrt(bx * bx + by * by + bz * bz);
+    phi = -2 * M_PI * weff * tstep;
+
+    if (weff != 0.0) {
+
+        xprod[0] = (by * mz - bz * my) / weff;
+        xprod[1] = (bz * mx - bx * mz) / weff;
+        xprod[2] = (bx * my - by * mx) / weff;
+
+        dot = (bx * mx + by * my + bz * mz) / weff;
+
+        tempm[0] = cos(phi) * mx + sin(phi) * xprod[0] + (1 - cos(phi)) * dot * bx / weff;
+        tempm[1] = cos(phi) * my + sin(phi) * xprod[1] + (1 - cos(phi)) * dot * by / weff;
+        tempm[2] = cos(phi) * mz + sin(phi) * xprod[2] + (1 - cos(phi)) * dot * bz / weff;
+
+        mx = tempm[0];
+        my = tempm[1];
+        mz = tempm[2];
+    }
+
+    //Need to update dephasing, too! 
+    //local field grad is already in Hz/distance.
+    if (advanceK) {
+        localKCoord[0] += 2.0 * M_PI * tstep * (gauss2Hz * appliedGrads[0] + localFieldGrad[0]) * voxelWidthX;
+        localKCoord[1] += 2.0 * M_PI * tstep * (gauss2Hz * appliedGrads[1] + localFieldGrad[1]) * voxelWidthY;
+        localKCoord[2] += 2.0 * M_PI * tstep * (gauss2Hz * appliedGrads[2] + localFieldGrad[2]) * voxelWidthZ;
+    }
 
 }
 

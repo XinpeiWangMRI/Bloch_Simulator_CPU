@@ -11,6 +11,10 @@ class magnetization {
     void rotate(const double bx, const double by, const double bz, const double tstep);
     //Overload rotate for events which have applied gradients.
     void rotate(const double bx, const double by, const double bz, const double tstep, const double appliedGrads[3]);
+    //Overload rotate for events where user needs to control how to advance kcoord (excitation pulse vs. refocus)
+    void rotate(const double bx, const double by, const double bz, const double tstep, const double appliedGrads[3],
+        const bool advanceK);
+    void rotate(const double bx, const double by, const double bz, const double tstep, const bool advanceK);
 
     //Set output spatial bin. Used to compute output based on time in acquire events.
     void setBin(const size_t index, const size_t numCols, const size_t numRows, const size_t numPages);

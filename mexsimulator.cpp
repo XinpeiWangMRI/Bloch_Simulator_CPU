@@ -9,10 +9,11 @@
 void mexsimulator(std::vector<magnetization>& magn, double* mxout, double* myout,
         double* mzout, const size_t nelements,  const size_t numCols, const size_t numRows,
         const size_t numPages, const size_t ndims, const double* gradx, const double* grady, const double* gradz,
-        const double* rfpulse, const double* rfphase, const double* events, const size_t nEvents) {
+        const double* rfpulse, const double* rfphase, const double* events, const size_t nEvents,
+        const bool* pulseTypeList) {
 
     //Starting times in each gradient + rfwaveform
-    size_t xstart = 0, ystart = 0, zstart = 0, rfstart = 0;
+    size_t xstart = 0, ystart = 0, zstart = 0, rfstart = 0, pulseListIndex = 0;
 
     //index into acquisition periods
     size_t acqstart = 0;
@@ -42,7 +43,7 @@ void mexsimulator(std::vector<magnetization>& magn, double* mxout, double* myout
                 switch (myEvent.getEvent()) {
 
                 case pulse:
-                    myEvent.pulseEvent(&magn[magnIndex], rfstart, rfpulse, rfphase);
+                    myEvent.pulseEvent(&magn[magnIndex], rfstart, rfpulse, rfphase, pulseTypeList[pulseListIndex]);
                     break;
 
                 case gradient:
@@ -52,7 +53,7 @@ void mexsimulator(std::vector<magnetization>& magn, double* mxout, double* myout
 
                 case pulseAndgrad:
                     myEvent.pulsegradEvent(&magn[magnIndex], xstart, ystart, zstart, gradx,
-                        grady, gradz, rfpulse, rfphase, rfstart);
+                        grady, gradz, rfpulse, rfphase, rfstart, pulseTypeList[pulseListIndex]);
                     break;
 
                 case delay:
@@ -68,7 +69,7 @@ void mexsimulator(std::vector<magnetization>& magn, double* mxout, double* myout
                 case pulseGradAcq:
                     myEvent.pulseGradAcqEvent(&magn[magnIndex], xstart, ystart, zstart,
                         gradx, grady, gradz, mxout, myout, mzout,
-                        ndims, acqstart, rfpulse, rfphase, rfstart);
+                        ndims, acqstart, rfpulse, rfphase, rfstart, pulseTypeList[pulseListIndex]);
                     break;
 
                 case thermaleq:
@@ -79,10 +80,16 @@ void mexsimulator(std::vector<magnetization>& magn, double* mxout, double* myout
                     myEvent.refocusEvent(&magn[magnIndex]);
                     break;
 
+                default:
+                    mexErrMsgIdAndTxt("MATLAB:event_manager:eventType",
+                        "Invalid Event");
+                    break;
                 }
             }
             
             //Update starting point in the various waveform arrays 
+
+
             if (rfpulse[rfstart] == rfNull) {
                 indexUpdate(&rfstart, 1);
             }
@@ -114,6 +121,17 @@ void mexsimulator(std::vector<magnetization>& magn, double* mxout, double* myout
             if (myEvent.getEvent() == acquisition) {
                 indexUpdate(&acqstart, myEvent.getnSteps());
             };
+
+            switch (myEvent.getEvent()) {
+            case pulse:
+            case pulseAndgrad:
+            case pulseGradAcq:
+                pulseListIndex++;
+                break;
+            //default does nothing intentionally.
+            default:
+                break;
+            }
         };
     };
 };

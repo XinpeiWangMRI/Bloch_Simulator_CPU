@@ -107,6 +107,10 @@ void mexFunction(int nlhs, mxArray* plhs[],
 	size_t ndims_VoxelWidths;
 	double* allWidths;
 
+	//Keep track of what types of pulses are, excitation (true) or refocusing (false)
+	bool* pulseTypeList;
+	bool pulseTypeFlag = false; //keep track if this field was entered by user.
+
 	for (int ifield = 0; ifield < nfields; ifield++) {
 		fname = (char*)mxGetFieldNameByNumber(prhs[0], ifield);
 
@@ -157,6 +161,10 @@ void mexFunction(int nlhs, mxArray* plhs[],
 		else if (strcmp(fname, "usrObj") == 0) {
 			usrObj = mxGetPr(mxGetFieldByNumber(prhs[0], 0, ifield));
 			usrObjFlag = true;
+		}
+		else if (strcmp(fname, "pulseTypeList") == 0) {
+			pulseTypeList = mxGetLogicals(mxGetFieldByNumber(prhs[0], 0, ifield));
+			pulseTypeFlag = true;
 		}
 		else if (strcmp(fname, "VoxelWidths") == 0) {
 			ndims_VoxelWidths = mxGetNumberOfDimensions(mxGetFieldByNumber(prhs[0], 0, ifield));
@@ -217,6 +225,12 @@ void mexFunction(int nlhs, mxArray* plhs[],
 	if (nrfamp - nrfphase != 0) {
 		mexErrMsgIdAndTxt("MATLAB:mex_blochsim:typeargin",
 			"RF amp and phase must be same size.");
+	}
+
+	//Throw error if pulseTypeList was not entered. Needed for correct dephasing calculations.
+	if (!pulseTypeFlag) {
+		mexErrMsgIdAndTxt("MATLAB:mex_blochsim:pulseTypeList",
+			"No pulseTypeList specified by the user");
 	}
 	/* Get total number of points in all acquisitions of experiment so can
 	 * allocate memory appropriately */
@@ -318,7 +332,7 @@ void mexFunction(int nlhs, mxArray* plhs[],
 	double* mzout = mxGetPr(plhs[2]);
 
 	mexsimulator(magn, mxout, myout, mzout, nelements, numCols, numRows,
-		numPages, ndims, Gx, Gy, Gz, rfamp, rfphase, events, nEvents);
+		numPages, ndims, Gx, Gy, Gz, rfamp, rfphase, events, nEvents, pulseTypeList);
 
 	delete[] dimsOut;
 	delete[] fname;
